@@ -39,17 +39,18 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         // register the UI widgets with their appropriate IDs
-        BSelectImage = findViewById(R.id.button);
+        //BSelectImage = findViewById(R.id.button);
         IVPreviewImage = findViewById(R.id.imageView);
 
         // handle the Choose Image button to trigger
         // the image chooser function
-        BSelectImage.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                imageChooser();
-            }
-        });
+//        BSelectImage.setOnClickListener(new View.OnClickListener() {
+//            @Override
+//            public void onClick(View v) {
+//                imageChooser();
+//            }
+//        });
+
         // Ikona aparatu
         ImageButton buttonCamera = findViewById(R.id.buttonCamera);
         buttonCamera.setOnClickListener(v -> {
