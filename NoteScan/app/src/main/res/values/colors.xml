@@ -2,4 +2,6 @@
 <resources>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+    <color name="colorOnline">#4CAF50</color> <!-- Zielony kolor dla online -->
+    <color name="colorOffline">#F44336</color> <!-- Czerwony kolor dla offline -->
 </resources>

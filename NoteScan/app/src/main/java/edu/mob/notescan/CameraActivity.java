@@ -1,5 +1,7 @@
 package edu.mob.notescan;
 
+import static android.provider.Telephony.Mms.Part.FILENAME;
+
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.os.Bundle;
@@ -17,6 +19,11 @@ import com.google.mlkit.vision.text.TextRecognizer;
 import com.google.mlkit.vision.text.TextRecognition;
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions;
 //import com.google.mlkit.vision.text.TextRecognizerOptions;
+
+import java.io.BufferedWriter;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
 
 import CropImageView.Guidelines;
 
@@ -36,32 +43,47 @@ public class CameraActivity extends AppCompatActivity {
         button_capture = findViewById(R.id.button_capture);
         button_copy = findViewById(R.id.button_copy);
         textViewResult = findViewById(R.id.textViewResult);
+        ImageButton buttonBack = findViewById(R.id.buttonBack);
+        ImageButton buttonSave = findViewById(R.id.buttonSave);
 
+
+        // Przycisk powrotu do ekranu głównego
+        buttonBack.setOnClickListener(v ->  finish());
+
+
+        // Przycisk do skopipowania tekstu po zakończonej obróbce
         button_copy.setOnClickListener(v -> {
             String textToCopy = textViewResult.getText().toString();
-            if (!textToCopy.isEmpty()) {
+            if (!textToCopy.isEmpty() && !textToCopy.equals("Wynik OCR pojawi się tutaj")) {
                 android.content.ClipboardManager clipboard = (android.content.ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
                 android.content.ClipData clip = android.content.ClipData.newPlainText("OCR Text", textToCopy);
                 clipboard.setPrimaryClip(clip);
                 Toast.makeText(this, "Skopiowano tekst do schowka", Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(this, "Brak tekstu do skopiowania", Toast.LENGTH_SHORT).show();
             }
         });
 
 
-        // Przycisk powrotu do ekranu głównego
-        ImageButton buttonBack = findViewById(R.id.buttonBack);
-        buttonBack.setOnClickListener(v ->  finish());
+        // Przycisk do zapisu tekstu jak .txt w pamięci urządznia
+        buttonSave.setOnClickListener(v -> {
+            String textToSave = textViewResult.getText().toString();
 
-        // Obsługa innych funkcjonalności (np. zapis zdjęcia)
-        ImageButton buttonSave = findViewById(R.id.buttonSave);
-        buttonSave.setOnClickListener(v -> Toast.makeText(this, "Funkcja zapisu nie została jeszcze zaimplementowana.", Toast.LENGTH_SHORT).show());
+            if (!textToSave.isEmpty() && !textToSave.equals("Wynik OCR pojawi się tutaj")) {
+                saveTextToFile(textToSave);
+            } else {
+                Toast.makeText(this, "Brak tekstu do zapisania", Toast.LENGTH_SHORT).show();
+            }
+        });
 
 
+        // Przycisk otwierający kamere
         button_capture.setOnClickListener(v -> {
             Intent cameraIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
             startActivityForResult(cameraIntent, REQUEST_IMAGE_CAPTURE);
         });
     }
+
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
@@ -76,16 +98,17 @@ public class CameraActivity extends AppCompatActivity {
         }
     }
 
+
     private void recognizeTextFromImage(Bitmap imageBitmap) {
-        // Konwersja obrazu na InputImage
+        // metoda do rozpoznania tekstu ze zdjęcia i wyswietlenia go w textViewResult
         InputImage image = InputImage.fromBitmap(imageBitmap, 0);
 
         TextRecognizerOptions options = new TextRecognizerOptions.Builder().build();
 
-        // Utworzenie instancji rozpoznawacza tekstu z domyślnymi opcjami
+            // Utworzenie instancji rozpoznawacza tekstu z domyślnymi opcjami
         TextRecognizer recognizer = TextRecognition.getClient(options);
 
-        // Rozpoczęcie procesu OCR
+            // Rozpoczęcie procesu OCR
         recognizer.process(image)
                 .addOnSuccessListener(result -> {
                     String recognizedText = result.getText();  // Pobranie rozpoznanego tekstu
@@ -97,12 +120,38 @@ public class CameraActivity extends AppCompatActivity {
     }
 
 
+    // Funkcja zapisująca tekst do pliku w pamięci wewnętrznej
+    private void saveTextToFile(String text) {
+        FileOutputStream fos = null;
+        BufferedWriter writer = null;
+        try {
+            // Otwórz strumień do zapisu pliku
+            fos = openFileOutput(FILENAME, MODE_PRIVATE);  // Zapisywanie w trybie prywatnym
+            writer = new BufferedWriter(new OutputStreamWriter(fos));
+
+            // Zapisz tekst do pliku
+            writer.write(text);
+            writer.newLine();  // Dodaj nową linię po zapisaniu tekstu
+
+            Toast.makeText(this, "Tekst został zapisany w pliku", Toast.LENGTH_SHORT).show();
+        } catch (IOException e) {
+            e.printStackTrace();
+            Toast.makeText(this, "Błąd zapisu do pliku", Toast.LENGTH_SHORT).show();
+        } finally {
+            try {
+                if (writer != null) {
+                    writer.close();
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+
+
 }
 
 
 
 
-
-
-// TO - DO:
-// Zapis zdjęcia (do zaimplementowania)

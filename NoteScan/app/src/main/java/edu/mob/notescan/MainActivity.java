@@ -11,6 +11,7 @@ import android.provider.MediaStore;
 import android.provider.Settings;
 import android.view.View;
 import android.widget.ImageButton;
+import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.Button;
 import android.widget.ImageView;
@@ -18,12 +19,14 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import android.content.Context;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
+
 
 public class MainActivity extends AppCompatActivity {
-
     private static final int CAMERA_PERMISSION_REQUEST_CODE = 100;
     private static final int GALLERY_REQUEST_CODE = 200;
-
 
     // One Button
     Button BSelectImage;
@@ -34,25 +37,26 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        // register the UI widgets with their appropriate IDs
-        //BSelectImage = findViewById(R.id.button);
-        IVPreviewImage = findViewById(R.id.imageView);
 
-        // handle the Choose Image button to trigger
-        // the image chooser function
-//        BSelectImage.setOnClickListener(new View.OnClickListener() {
-//            @Override
-//            public void onClick(View v) {
-//                imageChooser();
-//            }
-//        });
+        IVPreviewImage = findViewById(R.id.imageView);
+        ImageButton buttonCamera = findViewById(R.id.buttonCamera);
+        ImageButton buttonImport = findViewById(R.id.buttonImport);
+        TextView statusText = findViewById(R.id.statusText);
+
+        // Sprawdzanie połączenia internetowego i ustawianie tekstu oraz koloru
+        if (isNetworkAvailable()) {
+            statusText.setText("Jesteś online");
+            statusText.setTextColor(getResources().getColor(R.color.colorOnline));
+        } else {
+            statusText.setText("Brak połączenia z internetem");
+            statusText.setTextColor(getResources().getColor(R.color.colorOffline));
+        }
+
 
         // Ikona aparatu
-        ImageButton buttonCamera = findViewById(R.id.buttonCamera);
         buttonCamera.setOnClickListener(v -> {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
                 // Poproś o pozwolenie na aparat
@@ -60,26 +64,39 @@ public class MainActivity extends AppCompatActivity {
 
             } else {
                 // Przejdź do ekranu aparatu
-                openCamera();
+                openCameraActivity();
             }
         });
 
-        // Ikona importu (opcjonalnie możesz obsłużyć import tutaj)
-        ImageButton buttonImport = findViewById(R.id.buttonImport);
+
+        // Przycisk do wyboru zdjęcia z galerii
         buttonImport.setOnClickListener(v -> {
+            // Sprawdzamy wersję Androida
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                // Sprawdzamy, czy aplikacja ma uprawnienia do dostępu do wszystkich plików (od Androida 11)
                 if (!Environment.isExternalStorageManager()) {
+                    // Jeśli nie mamy uprawnień, przekierowujemy do ustawień, aby użytkownik mógł je przyznać
                     Intent intent = new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION);
                     intent.setData(Uri.parse("package:" + getPackageName()));
-                    startActivity(intent);
+                    startActivityForResult(intent, GALLERY_REQUEST_CODE);
                 } else {
-                   openGallery();
+                    // Jeśli mamy uprawnienia, otwieramy galerię
+                    openGallery();
+                }
+            } else {
+                // Dla starszych wersji Androida, sprawdzamy uprawnienia do pamięci
+                if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE)
+                        == PackageManager.PERMISSION_GRANTED) {
+                    // Jeśli mamy uprawnienia, otwieramy galerię
+                    openGallery();
+                } else {
+                    // Jeśli nie mamy uprawnień, prosimy o nie
+                    ActivityCompat.requestPermissions(this,
+                            new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},
+                            GALLERY_REQUEST_CODE);
                 }
             }
-
         });
-        //"Funkcja importu nie została jeszcze zaimplementowana.", Toast.LENGTH_SHORT).show());
-
     }
 
     private void openGallery() {
@@ -105,15 +122,16 @@ public class MainActivity extends AppCompatActivity {
         }
         if (requestCode == CAMERA_PERMISSION_REQUEST_CODE) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                openCamera();
+                openCameraActivity();
             } else {
                 Toast.makeText(this, "Odmówiono dostępu do aparatu.", Toast.LENGTH_SHORT).show();
             }
         }
     }
 
-    // Funkcja przejścia do ekranu aparatu
-    private void openCamera() {
+
+    // Funkcja przejścia do CameraActivity
+    private void openCameraActivity() {
         Intent intent = new Intent(this, CameraActivity.class);
         startActivity(intent);
     }
@@ -128,7 +146,7 @@ public class MainActivity extends AppCompatActivity {
             if (data != null) {
                 Uri selectedImage = data.getData(); // Uzyskanie URI wybranego obrazu
                 // Możesz teraz wyświetlić obraz lub przesłać go dalej
-                Toast.makeText(this, "Wybrano obraz: " + selectedImage.toString(), Toast.LENGTH_SHORT).show();
+                //Toast.makeText(this, "Wybrano obraz: " + selectedImage.toString(), Toast.LENGTH_SHORT).show();
                 // Na przykład: wyślij URI do innej aktywności lub pokaż w ImageView
             }
         }
@@ -136,22 +154,35 @@ public class MainActivity extends AppCompatActivity {
         super.onActivityResult(requestCode, resultCode, data);
 
         if (resultCode == RESULT_OK) {
-
             // compare the resultCode with the
             // SELECT_PICTURE constant
             if (requestCode == GALLERY_REQUEST_CODE) {
                 // Get the url of the image from data
                 Uri selectedImageUri = data.getData();
-                if (null != selectedImageUri) {
+                if (selectedImageUri != null) {
+                    openCameraActivity();
+                    // CameraActivity.onActivityResult();
                     // update the preview image in the layout
-                    IVPreviewImage.setImageURI(selectedImageUri);
+                    //IVPreviewImage.setImageURI(selectedImageUri);
                 }
             }
         }
     }
 
-    void imageChooser() {
 
+    // Funkcja sprawdzająca połączenie z internetem
+    private boolean isNetworkAvailable() {
+        ConnectivityManager connectivityManager =
+                (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        if (connectivityManager != null) {
+            NetworkInfo networkInfo = connectivityManager.getActiveNetworkInfo();
+            return networkInfo != null && networkInfo.isConnected();
+        }
+        return false;
+    }
+
+
+    protected void imageChooser() {
         // create an instance of the
         // intent of the type image
         Intent i = new Intent();
@@ -162,6 +193,9 @@ public class MainActivity extends AppCompatActivity {
         // with the returned requestCode
         startActivityForResult(Intent.createChooser(i, "Select Picture"), GALLERY_REQUEST_CODE);
     }
+
+
+
 }
 
 
