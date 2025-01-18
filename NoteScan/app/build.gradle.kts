@@ -29,6 +29,7 @@ android {
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8
     }
+
 }
 
 dependencies {
@@ -43,6 +44,7 @@ dependencies {
     //implementation(libs.vanniktech.android.image.cropper)
     //implementation(libs.android.image.cropper)
     implementation(libs.play.services.cast.framework)
+    implementation(project(":openCV"))
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)

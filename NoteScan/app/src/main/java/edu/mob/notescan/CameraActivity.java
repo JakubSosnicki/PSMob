@@ -22,12 +22,13 @@ import java.io.BufferedWriter;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
-//import org.opencv.android.OpenCVLoader;
-//import org.opencv.core.CvType;
-//import org.opencv.core.Mat;
-//import org.opencv.core.Size;
-//import org.opencv.imgproc.Imgproc;
-//import org.opencv.core.MatOfFloat;
+import org.opencv.android.OpenCVLoader;
+import org.opencv.android.Utils;
+import org.opencv.core.CvType;
+import org.opencv.core.Mat;
+import org.opencv.core.Size;
+import org.opencv.imgproc.Imgproc;
+import org.opencv.core.MatOfFloat;
 
 
 
@@ -43,6 +44,7 @@ public class CameraActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_camera);
 
+        OpenCVLoader.initDebug();
         button_capture = findViewById(R.id.button_capture);
         button_copy = findViewById(R.id.button_copy);
         textViewResult = findViewById(R.id.textViewResult);
@@ -104,7 +106,24 @@ public class CameraActivity extends AppCompatActivity {
 
     private void recognizeTextFromImage(Bitmap imageBitmap) {
         // metoda do rozpoznania tekstu ze zdjęcia i wyswietlenia go w textViewResult
-        InputImage image = InputImage.fromBitmap(imageBitmap, 0);
+
+        Mat matImage = new Mat();
+        Utils.bitmapToMat(imageBitmap, matImage);
+
+        // Konwersja obrazu do odcieni szarości
+        Imgproc.cvtColor(matImage, matImage, Imgproc.COLOR_RGB2GRAY);
+
+        // Zwiększenie kontrastu - binaryzacja (thresholding)
+        Imgproc.threshold(matImage, matImage, 0, 255, Imgproc.THRESH_BINARY | Imgproc.THRESH_OTSU);
+
+        // Usuwanie szumów - użycie filtru mediana
+        Imgproc.medianBlur(matImage, matImage, 5);
+
+        // Przekształcenie Mat do Bitmapy, aby można było przekazać go do ML Kit
+        Bitmap processedBitmap = Bitmap.createBitmap(matImage.cols(), matImage.rows(), Bitmap.Config.ARGB_8888);
+        Utils.matToBitmap(matImage, processedBitmap);
+
+        InputImage image = InputImage.fromBitmap(processedBitmap, 0);
 
         TextRecognizerOptions options = new TextRecognizerOptions.Builder().build();
 

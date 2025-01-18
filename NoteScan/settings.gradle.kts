@@ -22,4 +22,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "NoteScan"
 include(":app")
- 
+include(":openCV")

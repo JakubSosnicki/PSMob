@@ -1,3 +1,5 @@
+package edu.mob.notescan;
+
 import android.os.AsyncTask;
 import android.util.Log;
 import okhttp3.MediaType;
@@ -9,7 +11,7 @@ import okhttp3.Response;
 import org.json.JSONObject;
 
 public class OpenAIRequestTask extends AsyncTask<String, Void, String> {
-    private static final String API_KEY = "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";
+    private static final String API_KEY = "API_KEY";
     private static final String API_URL = "https://api.openai.com/v1/completions";
 
     @Override
