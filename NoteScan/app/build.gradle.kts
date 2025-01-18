@@ -46,10 +46,11 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)
-    //api("com.theartofdev.edmodo:android-image-cropper:2.8.+")
     implementation("com.squareup.okhttp3:okhttp:4.10.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.10.0")
     implementation("org.json:json:20210307")  // Do pracy z JSON
+    //implementation(libs.opencv.android)  // implemetacja openCV
+    //implementation(libs.opencv.android)
 
 
 }

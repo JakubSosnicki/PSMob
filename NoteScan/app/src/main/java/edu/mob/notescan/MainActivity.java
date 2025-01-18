@@ -24,6 +24,8 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 
 
+
+
 public class MainActivity extends AppCompatActivity {
     private static final int CAMERA_PERMISSION_REQUEST_CODE = 100;
     private static final int GALLERY_REQUEST_CODE = 200;
@@ -46,7 +48,7 @@ public class MainActivity extends AppCompatActivity {
         ImageButton buttonImport = findViewById(R.id.buttonImport);
         TextView statusText = findViewById(R.id.statusText);
 
-        // Sprawdzanie połączenia internetowego i ustawianie tekstu oraz koloru
+        // Sprawdzanie połączenia internetowego i ustawianie tekstu oraz jego koloru
         if (isNetworkAvailable()) {
             statusText.setText("Jesteś online");
             statusText.setTextColor(getResources().getColor(R.color.colorOnline));

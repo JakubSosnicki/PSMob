@@ -18,14 +18,17 @@ import com.google.mlkit.vision.common.InputImage;
 import com.google.mlkit.vision.text.TextRecognizer;
 import com.google.mlkit.vision.text.TextRecognition;
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions;
-//import com.google.mlkit.vision.text.TextRecognizerOptions;
-
 import java.io.BufferedWriter;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
+//import org.opencv.android.OpenCVLoader;
+//import org.opencv.core.CvType;
+//import org.opencv.core.Mat;
+//import org.opencv.core.Size;
+//import org.opencv.imgproc.Imgproc;
+//import org.opencv.core.MatOfFloat;
 
-import CropImageView.Guidelines;
 
 
 public class CameraActivity extends AppCompatActivity {
