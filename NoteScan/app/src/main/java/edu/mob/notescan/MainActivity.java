@@ -3,6 +3,7 @@ package edu.mob.notescan;
 import android.Manifest;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -23,13 +24,27 @@ import androidx.core.content.ContextCompat;
 import android.content.Context;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+
+import com.google.mlkit.vision.common.InputImage;
+import com.google.mlkit.vision.text.TextRecognition;
+import com.google.mlkit.vision.text.TextRecognizer;
+import com.google.mlkit.vision.text.latin.TextRecognizerOptions;
+
 import org.opencv.android.OpenCVLoader;
+import org.opencv.android.Utils;
+import org.opencv.core.Mat;
+import org.opencv.imgproc.Imgproc;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.text.BreakIterator;
 
 
 public class MainActivity extends AppCompatActivity {
     private static final int CAMERA_PERMISSION_REQUEST_CODE = 100;
     private static final int GALLERY_REQUEST_CODE = 200;
-
+    private static final int REQUEST_IMAGE_CAPTURE = 1;
     // One Button
     Button BSelectImage;
     ImageButton Photo;
@@ -42,7 +57,6 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        IVPreviewImage = findViewById(R.id.imageView);
         ImageButton buttonCamera = findViewById(R.id.buttonCamera);
         ImageButton buttonImport = findViewById(R.id.buttonImport);
         TextView statusText = findViewById(R.id.statusText);
@@ -57,15 +71,16 @@ public class MainActivity extends AppCompatActivity {
         }
 
 
-        // Ikona aparatu
+        // Przycisk do odpalenia kamery
         buttonCamera.setOnClickListener(v -> {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
                 // Poproś o pozwolenie na aparat
                 ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, CAMERA_PERMISSION_REQUEST_CODE);
 
-            } else {
-                // Przejdź do ekranu aparatu
-                openCameraActivity();
+            }
+            else {
+                Intent cameraIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+                startActivityForResult(cameraIntent, REQUEST_IMAGE_CAPTURE);
             }
         });
 
@@ -74,24 +89,20 @@ public class MainActivity extends AppCompatActivity {
         buttonImport.setOnClickListener(v -> {
             // Sprawdzamy wersję Androida
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                // Sprawdzamy, czy aplikacja ma uprawnienia do dostępu do wszystkich plików (od Androida 11)
                 if (!Environment.isExternalStorageManager()) {
                     // Jeśli nie mamy uprawnień, przekierowujemy do ustawień, aby użytkownik mógł je przyznać
                     Intent intent = new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION);
                     intent.setData(Uri.parse("package:" + getPackageName()));
                     startActivityForResult(intent, GALLERY_REQUEST_CODE);
                 } else {
-                    // Jeśli mamy uprawnienia, otwieramy galerię
                     openGallery();
                 }
             } else {
-                // Dla starszych wersji Androida, sprawdzamy uprawnienia do pamięci
                 if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE)
                         == PackageManager.PERMISSION_GRANTED) {
-                    // Jeśli mamy uprawnienia, otwieramy galerię
                     openGallery();
                 } else {
-                    // Jeśli nie mamy uprawnień, prosimy o nie
+                    // Jeśli nie mamy uprawnień prosimy o nie
                     ActivityCompat.requestPermissions(this,
                             new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},
                             GALLERY_REQUEST_CODE);
@@ -100,8 +111,9 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+
+    // Funkcja otwierająca galerie
     private void openGallery() {
-        // Tworzenie intencji do otwierania galerii
         Intent intent = new Intent();
         intent.setType("image/*");
         intent.setAction(Intent.ACTION_GET_CONTENT);
@@ -123,7 +135,9 @@ public class MainActivity extends AppCompatActivity {
         }
         if (requestCode == CAMERA_PERMISSION_REQUEST_CODE) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                openCameraActivity();
+                Intent cameraIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+                startActivityForResult(cameraIntent, REQUEST_IMAGE_CAPTURE);
+
             } else {
                 Toast.makeText(this, "Odmówiono dostępu do aparatu.", Toast.LENGTH_SHORT).show();
             }
@@ -131,9 +145,21 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-    // Funkcja przejścia do CameraActivity
-    private void openCameraActivity() {
+    // Funkcja przejścia do CameraActivity z plikiem
+    private void openCameraActivity2(String imagePath) {
         Intent intent = new Intent(this, CameraActivity.class);
+        intent.putExtra("imagePath", imagePath);
+        startActivity(intent);
+    }
+
+
+    // Funkcja do przejścia do CameraActivity z bitmapą z zrobionym zdjęciem
+    private void openCameraActivity(Bitmap bitmap) {
+        Intent intent = new Intent(this, CameraActivity.class);
+        // Przekazywanie bitmapy przez Intent (tutaj używamy putExtra)
+        Bundle bundle = new Bundle();
+        bundle.putParcelable("imageBitmap", bitmap);
+        intent.putExtras(bundle);
         startActivity(intent);
     }
 
@@ -146,25 +172,37 @@ public class MainActivity extends AppCompatActivity {
         if (requestCode == GALLERY_REQUEST_CODE && resultCode == RESULT_OK) {
             if (data != null) {
                 Uri selectedImage = data.getData(); // Uzyskanie URI wybranego obrazu
-                // Możesz teraz wyświetlić obraz lub przesłać go dalej
-                //Toast.makeText(this, "Wybrano obraz: " + selectedImage.toString(), Toast.LENGTH_SHORT).show();
-                // Na przykład: wyślij URI do innej aktywności lub pokaż w ImageView
             }
+        }
+
+        if (requestCode == REQUEST_IMAGE_CAPTURE && resultCode == RESULT_OK) {
+            // Pobieranie obrazu z kamery
+            Bundle extras = data.getExtras();
+            Bitmap imageBitmap = (Bitmap) extras.get("data");
+
+            // Po wykonaniu zdjęcia przechodzimy do openCameraActivity i aktywujemy ocr dla zdjęcia
+            openCameraActivity(imageBitmap);
         }
 
         super.onActivityResult(requestCode, resultCode, data);
 
         if (resultCode == RESULT_OK) {
-            // compare the resultCode with the
-            // SELECT_PICTURE constant
             if (requestCode == GALLERY_REQUEST_CODE) {
-                // Get the url of the image from data
                 Uri selectedImageUri = data.getData();
                 if (selectedImageUri != null) {
-                    openCameraActivity();
-                    // CameraActivity.onActivityResult();
-                    // update the preview image in the layout
-                    //IVPreviewImage.setImageURI(selectedImageUri);
+                    try {
+                        Bitmap imageBitmap = MediaStore.Images.Media.getBitmap(getContentResolver(), selectedImageUri);
+
+                        // Zapis bitmapy do pliku
+                        File cacheDir = getCacheDir();
+                        File file = new File(cacheDir, "temp_image.jpg");
+                        FileOutputStream fos = new FileOutputStream(file);
+                        imageBitmap.compress(Bitmap.CompressFormat.JPEG, 100, fos);
+                        fos.close();
+                        openCameraActivity2(file.getAbsolutePath());
+                    } catch (IOException e) {
+                        Toast.makeText(this, "Błąd ładowania obrazu", Toast.LENGTH_SHORT).show();
+                    }
                 }
             }
         }
@@ -180,19 +218,6 @@ public class MainActivity extends AppCompatActivity {
             return networkInfo != null && networkInfo.isConnected();
         }
         return false;
-    }
-
-
-    protected void imageChooser() {
-        // create an instance of the
-        // intent of the type image
-        Intent i = new Intent();
-        i.setType("image/*");
-        i.setAction(Intent.ACTION_GET_CONTENT);
-
-        // pass the constant to compare it
-        // with the returned requestCode
-        startActivityForResult(Intent.createChooser(i, "Select Picture"), GALLERY_REQUEST_CODE);
     }
 
 

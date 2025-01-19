@@ -4,6 +4,7 @@ import static android.provider.Telephony.Mms.Part.FILENAME;
 
 import android.content.Intent;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.os.Bundle;
 import android.provider.MediaStore;
 import android.view.View;
@@ -50,6 +51,30 @@ public class CameraActivity extends AppCompatActivity {
         textViewResult = findViewById(R.id.textViewResult);
         ImageButton buttonBack = findViewById(R.id.buttonBack);
         ImageButton buttonSave = findViewById(R.id.buttonSave);
+
+
+        Bitmap imageBitmap = getIntent().getParcelableExtra("imageBitmap");
+        // sprawdznie czy przeslano obraz
+        if (imageBitmap != null) {
+
+            recognizeTextFromImage(imageBitmap);
+        } else {
+            // jesli nie obraz sprawdz czy przesłan imagePath
+            String imagePath = getIntent().getStringExtra("imagePath");
+            if (imagePath != null) {
+                // ścieżka na Bitmape
+                Bitmap bitmapFromPath = BitmapFactory.decodeFile(imagePath);
+                if (bitmapFromPath != null) {
+                    recognizeTextFromImage(bitmapFromPath);
+                } else {
+                    Toast.makeText(this, "Nie udało się wczytać obrazu z podanej ścieżki.", Toast.LENGTH_SHORT).show();
+                }
+            } else {
+                // Jeśli ani Bitmap, ani imagePath nie są dostępne, wyświetl błąd
+                Toast.makeText(this, "Nie przesłano obrazu do przetwarzania.", Toast.LENGTH_SHORT).show();
+            }
+        }
+
 
 
         // Przycisk powrotu do ekranu głównego
@@ -104,26 +129,26 @@ public class CameraActivity extends AppCompatActivity {
     }
 
 
-    private void recognizeTextFromImage(Bitmap imageBitmap) {
+    public void recognizeTextFromImage(Bitmap imageBitmap) {
         // metoda do rozpoznania tekstu ze zdjęcia i wyswietlenia go w textViewResult
 
-        Mat matImage = new Mat();
-        Utils.bitmapToMat(imageBitmap, matImage);
+//        Mat matImage = new Mat();
+//        Utils.bitmapToMat(imageBitmap, matImage);
+//
+//        // Konwersja obrazu do odcieni szarości
+//        Imgproc.cvtColor(matImage, matImage, Imgproc.COLOR_RGB2GRAY);
+//
+//        // Zwiększenie kontrastu - binaryzacja (thresholding)
+//        Imgproc.threshold(matImage, matImage, 0, 255, Imgproc.THRESH_BINARY | Imgproc.THRESH_OTSU);
+//
+//        // Usuwanie szumów - użycie filtru mediana
+//        Imgproc.medianBlur(matImage, matImage, 5);
+//
+//        // Przekształcenie Mat do Bitmapy, aby można było przekazać go do ML Kit
+//        Bitmap processedBitmap = Bitmap.createBitmap(matImage.cols(), matImage.rows(), Bitmap.Config.ARGB_8888);
+//        Utils.matToBitmap(matImage, processedBitmap);
 
-        // Konwersja obrazu do odcieni szarości
-        Imgproc.cvtColor(matImage, matImage, Imgproc.COLOR_RGB2GRAY);
-
-        // Zwiększenie kontrastu - binaryzacja (thresholding)
-        Imgproc.threshold(matImage, matImage, 0, 255, Imgproc.THRESH_BINARY | Imgproc.THRESH_OTSU);
-
-        // Usuwanie szumów - użycie filtru mediana
-        Imgproc.medianBlur(matImage, matImage, 5);
-
-        // Przekształcenie Mat do Bitmapy, aby można było przekazać go do ML Kit
-        Bitmap processedBitmap = Bitmap.createBitmap(matImage.cols(), matImage.rows(), Bitmap.Config.ARGB_8888);
-        Utils.matToBitmap(matImage, processedBitmap);
-
-        InputImage image = InputImage.fromBitmap(processedBitmap, 0);
+        InputImage image = InputImage.fromBitmap(imageBitmap, 0);
 
         TextRecognizerOptions options = new TextRecognizerOptions.Builder().build();
 
@@ -131,6 +156,44 @@ public class CameraActivity extends AppCompatActivity {
         TextRecognizer recognizer = TextRecognition.getClient(options);
 
             // Rozpoczęcie procesu OCR
+        recognizer.process(image)
+                .addOnSuccessListener(result -> {
+                    String recognizedText = result.getText();  // Pobranie rozpoznanego tekstu
+                    textViewResult.setText(recognizedText);   // Wyświetlenie tekstu w TextView
+                })
+                .addOnFailureListener(e -> {
+                    textViewResult.setText("Błąd podczas rozpoznawania tekstu: " + e.getMessage());
+                });
+    }
+
+
+
+    public void recognizeTextFromImageWithLLM(Bitmap imageBitmap) {
+        // metoda do rozpoznania tekstu ze zdjęcia oraz obróbki przez LLM
+
+//        Mat matImage = new Mat();
+//        Utils.bitmapToMat(imageBitmap, matImage);
+//
+//        // Konwersja obrazu do odcieni szarości
+//        Imgproc.cvtColor(matImage, matImage, Imgproc.COLOR_RGB2GRAY);
+//
+//        // Zwiększenie kontrastu - binaryzacja (thresholding)
+//        Imgproc.threshold(matImage, matImage, 0, 255, Imgproc.THRESH_BINARY | Imgproc.THRESH_OTSU);
+//
+//        // Usuwanie szumów - użycie filtru mediana
+//        Imgproc.medianBlur(matImage, matImage, 5);
+//
+//        // Przekształcenie Mat do Bitmapy, aby można było przekazać go do ML Kit
+//        Bitmap processedBitmap = Bitmap.createBitmap(matImage.cols(), matImage.rows(), Bitmap.Config.ARGB_8888);
+//        Utils.matToBitmap(matImage, processedBitmap);
+
+        InputImage image = InputImage.fromBitmap(imageBitmap, 0);
+        TextRecognizerOptions options = new TextRecognizerOptions.Builder().build();
+
+        // Utworzenie instancji rozpoznawacza tekstu z domyślnymi opcjami
+        TextRecognizer recognizer = TextRecognition.getClient(options);
+
+        // Rozpoczęcie OCR
         recognizer.process(image)
                 .addOnSuccessListener(result -> {
                     String recognizedText = result.getText();  // Pobranie rozpoznanego tekstu

@@ -7,7 +7,6 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
-
 import org.json.JSONObject;
 
 public class OpenAIRequestTask extends AsyncTask<String, Void, String> {
@@ -18,18 +17,17 @@ public class OpenAIRequestTask extends AsyncTask<String, Void, String> {
     protected String doInBackground(String... prompts) {
         OkHttpClient client = new OkHttpClient();
 
-        // Budujemy JSON z danymi do wysłania
         JSONObject jsonObject = new JSONObject();
         try {
-            jsonObject.put("model", "text-davinci-003"); // Możesz użyć innego modelu
-            jsonObject.put("prompt", prompts[0]); // Prompt, który chcesz wysłać
-            jsonObject.put("max_tokens", 100); // Maksymalna liczba tokenów w odpowiedzi
+            jsonObject.put("model", "text-davinci-003");
+            jsonObject.put("prompt", prompts[0]);
+            jsonObject.put("max_tokens", 1000);
         } catch (Exception e) {
             e.printStackTrace();
             return null;
         }
 
-        // Tworzymy zapytanie HTTP POST
+        // Zapytanie HTTP POST
         RequestBody body = RequestBody.create(
                 jsonObject.toString(),
                 MediaType.parse("application/json; charset=utf-8")
@@ -44,7 +42,7 @@ public class OpenAIRequestTask extends AsyncTask<String, Void, String> {
         try {
             Response response = client.newCall(request).execute();
             if (response.isSuccessful()) {
-                // Zwróć odpowiedź z API
+                // Odpowiedź z API
                 return response.body().string();
             } else {
                 return "Error: " + response.code();
