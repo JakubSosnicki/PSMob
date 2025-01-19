@@ -124,7 +124,7 @@ public class CameraActivity extends AppCompatActivity {
             Bundle extras = data.getExtras();
             Bitmap imageBitmap = (Bitmap) extras.get("data");
             // Rozpocznij proces OCR
-            recognizeTextFromImage(imageBitmap);
+            recognizeTextFromImageWithLLM(imageBitmap);
         }
     }
 
@@ -167,25 +167,8 @@ public class CameraActivity extends AppCompatActivity {
     }
 
 
-
+    // Metoda rozpoznaje tekst i koryguje go odpowiedzia z LLM przed wpisaniem w textViewResult
     public void recognizeTextFromImageWithLLM(Bitmap imageBitmap) {
-        // metoda do rozpoznania tekstu ze zdjęcia oraz obróbki przez LLM
-
-//        Mat matImage = new Mat();
-//        Utils.bitmapToMat(imageBitmap, matImage);
-//
-//        // Konwersja obrazu do odcieni szarości
-//        Imgproc.cvtColor(matImage, matImage, Imgproc.COLOR_RGB2GRAY);
-//
-//        // Zwiększenie kontrastu - binaryzacja (thresholding)
-//        Imgproc.threshold(matImage, matImage, 0, 255, Imgproc.THRESH_BINARY | Imgproc.THRESH_OTSU);
-//
-//        // Usuwanie szumów - użycie filtru mediana
-//        Imgproc.medianBlur(matImage, matImage, 5);
-//
-//        // Przekształcenie Mat do Bitmapy, aby można było przekazać go do ML Kit
-//        Bitmap processedBitmap = Bitmap.createBitmap(matImage.cols(), matImage.rows(), Bitmap.Config.ARGB_8888);
-//        Utils.matToBitmap(matImage, processedBitmap);
 
         InputImage image = InputImage.fromBitmap(imageBitmap, 0);
         TextRecognizerOptions options = new TextRecognizerOptions.Builder().build();
@@ -197,7 +180,25 @@ public class CameraActivity extends AppCompatActivity {
         recognizer.process(image)
                 .addOnSuccessListener(result -> {
                     String recognizedText = result.getText();  // Pobranie rozpoznanego tekstu
-                    textViewResult.setText(recognizedText);   // Wyświetlenie tekstu w TextView
+                    //textViewResult.setText(recognizedText);
+
+                    if (!recognizedText.isEmpty()) {
+                        String prompt = "Popraw ten tekst z OCR na poprawny po polsku napisz tylko sam wynik twojej poprawy:\n" + recognizedText;
+                        new OpenAIRequestTask(this, new OpenAIRequestTask.OpenAIResponseCallback() {
+                            @Override
+                            public void onSuccess(String response) {
+                                textViewResult.setText(response);
+                            }
+
+                            @Override
+                            public void onFailure(String error) {
+                                // W przypadku błędu
+                                textViewResult.setText("Błąd podczas komunikacji z API: " + error);
+                            }
+                        }).execute(prompt);     // Przekazanie rozpoznanego tekstu jako prompt
+                    } else {
+                        textViewResult.setText("Brak rozpoznanego tekstu.");
+                    }
                 })
                 .addOnFailureListener(e -> {
                     textViewResult.setText("Błąd podczas rozpoznawania tekstu: " + e.getMessage());
